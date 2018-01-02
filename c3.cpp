@@ -31,6 +31,12 @@ int main() {
   doc.body()
       .insertBefore(doc.createElement("p"), para)
       .textContent("Goodbye World!");
+  for (auto &&child : doc.body().children())
+    cout << child.nodeName() << ": " << child.textContent() << "\n";
+
+  c3().select("body").selectAll("p").forEach([](const Node &n) {
+    cout << n.nodeName() << ": " << n.textContent() << "\n";
+  });
 
   {
     map<string, int> dat{{{"hello", 4}, {"world", 7}}};

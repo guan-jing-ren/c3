@@ -5,6 +5,8 @@
 #include "c3-js-node.hpp"
 
 struct ParentNode : virtual Node {
+  using Node::Node;
+
   HTMLCollection children() const { return {node["children"]}; }
   template <typename E = Element> E firstElementChild() const {
     return {node["firstElementChild"]};
@@ -17,10 +19,10 @@ struct ParentNode : virtual Node {
   }
 
   template <typename E = Element>
-  E querySelector(const string &selector) const {
+  E querySelector(const DOMString &selector) const {
     return {node.call<val>("querySelector", val(selector))};
   }
-  NodeList querySelectorAll(const string &selector) const {
+  NodeList querySelectorAll(const DOMString &selector) const {
     return {node.call<val>("querySelectorAll", val(selector))};
   }
 };

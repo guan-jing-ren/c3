@@ -65,6 +65,57 @@ struct Select {
         return value;
     });
   }
+
+  struct lambda_view {
+    template <typename C> static void caller(void *context, Node &n) {
+      (*static_cast<C *>(context))(n);
+    }
+
+    void *context;
+    void (*call)(void *, Node &);
+
+    template <typename C>
+    lambda_view(C &&c) : context(&c), call(&caller<decay_t<C>>) {}
+
+    void operator()(Node &n) { call(context, n); }
+  };
+
+  template <typename F> Select &forEach(F &&f) {
+    switch (criteria.index()) {
+    case 0:
+      if (group)
+        group->forEach(lambda_view([this, &f](Node &n) mutable {
+          auto query = ParentNode(n.node).querySelector(get<0>(criteria));
+          f(query);
+        }));
+      else {
+        auto query =
+            Document{val::global("document")}.querySelector(get<0>(criteria));
+        f(query);
+      }
+      break;
+    case 1:
+      if (group)
+        group->forEach(lambda_view([this, &f](Node &n) mutable {
+          for (auto &&query :
+               ParentNode(n.node).querySelectorAll(get<1>(criteria)))
+            f(query);
+        }));
+      else
+        for (auto &&query : Document{val::global("document")}.querySelectorAll(
+                 get<1>(criteria)))
+          f(query);
+      break;
+    case 2:
+      f(get<2>(criteria));
+      break;
+    case 3:
+      for (auto &&node : get<3>(criteria))
+        f(node);
+      break;
+    }
+    return *this;
+  }
 };
 
 #endif

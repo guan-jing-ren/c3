@@ -19,18 +19,17 @@ struct Select {
       : group(s.group ? make_unique<Select>(*s.group) : nullptr),
         criteria(s.criteria) {}
   template <typename C> Select(C &&c, bool all) {
-    using CC = decay_t<C>;
-    if constexpr (is_same_v<CC, string>) {
+    if constexpr (is_constructible_v<DOMString, C>) {
       if (!all)
         criteria.emplace<0>(forward<C>(c));
       else
         criteria.emplace<1>(forward<C>(c));
-    } else if constexpr (is_same_v<CC, Node>) {
+    } else if constexpr (is_constructible_v<Node, C>) {
       if (!all)
         criteria = forward<C>(c);
       else
         criteria.emplace<3>({forward<C>(c)});
-    } else if constexpr (is_same_v<CC, vector<Node>>) {
+    } else if constexpr (is_constructible_v<vector<Node>, C>) {
       if (!all)
         criteria = c[0];
       else

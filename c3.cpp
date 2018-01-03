@@ -34,13 +34,13 @@ int main() {
   for (auto &&child : doc.body().children())
     cout << child.nodeName() << ": " << child.textContent() << "\n";
 
-  c3().select("body").selectAll("p").forEach([](const Node &n) {
+  c3().selectAll("p").forEach([](const Node &n) {
     cout << n.nodeName() << ": " << n.textContent() << "\n";
   });
 
   {
     map<string, int> dat{{{"hello", 4}, {"world", 7}}};
-    c3().select("body").select("p").data(dat).enter();
+    c3().select("p").data(dat).enter();
   }
   {
     vector<string> dat{{{"hello"}, {"world"}}};

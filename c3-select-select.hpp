@@ -84,7 +84,7 @@ struct Select {
 
   template <typename Database> Database &data() const {
     Database *db = nullptr;
-    group->forEach([&db](Node &n) {
+    auto retriever = [&db](Node &n) {
       void *address = nullptr;
       Element e{n.node};
       if (!e.hasAttribute("data-c3")) {
@@ -95,7 +95,14 @@ struct Select {
         address = reinterpret_cast<void *>(stoull(e.getAttribute("data-c3")));
 
       db = static_pointer_cast<Database>(*datastore.find(address)).get();
-    });
+    };
+
+    if (group)
+      group->forEach(retriever);
+    else {
+      auto doc = Document{val::global("document")}.documentElement();
+      retriever(doc);
+    }
     return *db;
   }
 

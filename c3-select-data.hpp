@@ -1,7 +1,7 @@
 #ifndef C3_SELECT_DATA_HPP
 #define C3_SELECT_DATA_HPP
 
-#include "c3-select-fwd.hpp"
+#include "c3-select-select.hpp"
 
 template <typename Database, typename KeyFunction> struct Data {
   unique_ptr<Select> group;
@@ -16,6 +16,9 @@ template <typename Database, typename KeyFunction> struct Data {
     cout << size(database) << "\n";
     for (auto &data : database)
       cout << keyfunction(data) << "\n";
+
+    Database &data = group->data<remove_reference_t<Database>>();
+
     return {*group};
   }
   template <typename S = Select> S exit() { return {*group}; }

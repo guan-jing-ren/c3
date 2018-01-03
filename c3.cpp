@@ -40,7 +40,7 @@ int main() {
 
   {
     map<string, int> dat{{{"hello", 4}, {"world", 7}}};
-    c3().select("*").data(dat).enter();
+    c3().select("body").select("p").data(dat).enter();
   }
   {
     vector<string> dat{{{"hello"}, {"world"}}};

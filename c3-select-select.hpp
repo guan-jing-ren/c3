@@ -1,15 +1,31 @@
 #ifndef C3_SELECT_SELECT_HPP
 #define C3_SELECT_SELECT_HPP
 
-#include "c3-select-data.hpp"
+#include "c3-select-fwd.hpp"
 
 #include <experimental/type_traits>
 #include <memory>
+#include <set>
 #include <variant>
 
 using std::experimental::is_detected_v;
 
+struct data_compare {
+  using is_transparent = void *;
+  bool operator()(const shared_ptr<void> &sp, const void *p) const {
+    return sp.get() < p;
+  }
+  bool operator()(const void *p, const shared_ptr<void> &sp) const {
+    return p < sp.get();
+  }
+  bool operator()(const shared_ptr<void> &l, const shared_ptr<void> &r) const {
+    return l < r;
+  }
+};
+
 struct Select {
+  static set<shared_ptr<void>, data_compare> datastore;
+
   unique_ptr<Select> group;
 
   using criteria_type = variant<string, string, Node, vector<Node>>;
@@ -66,6 +82,23 @@ struct Select {
     });
   }
 
+  template <typename Database> Database &data() const {
+    Database *db = nullptr;
+    group->forEach([&db](Node &n) {
+      void *address = nullptr;
+      Element e{n.node};
+      if (!e.hasAttribute("data-c3")) {
+        address = datastore.emplace(shared_ptr<void>{make_shared<Database>()})
+                      .first->get();
+        e.setAttribute("data-c3", to_string(reinterpret_cast<size_t>(address)));
+      } else
+        address = reinterpret_cast<void *>(stoull(e.getAttribute("data-c3")));
+
+      db = static_pointer_cast<Database>(*datastore.find(address)).get();
+    });
+    return *db;
+  }
+
   struct lambda_view {
     template <typename C> static void caller(void *context, Node &n) {
       (*static_cast<C *>(context))(n);
@@ -118,4 +151,5 @@ struct Select {
   }
 };
 
+set<shared_ptr<void>, data_compare> Select::datastore;
 #endif

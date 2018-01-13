@@ -281,52 +281,61 @@ struct Select {
   };
 
   vector<Element> nodes() {
-    vector<Element> nods;
-    switch (criteria.index()) {
-    case 0:
-      if (group)
-        for (Element &n : group->nodes()) {
-          auto query = ParentNode(n.node).querySelector(get<0>(criteria));
-          nods.push_back(query);
-        }
-      else {
-        auto query =
-            Document{val::global("document")}.querySelector(get<0>(criteria));
-        nods.push_back(query);
-      }
-      break;
-    case 1:
-      if (group)
-        for (Element &n : group->nodes())
-          for (auto &&query :
-               ParentNode(n.node).querySelectorAll(get<1>(criteria)))
-            nods.push_back(query);
-      else
-        for (auto &&query : Document{val::global("document")}.querySelectorAll(
-                 get<1>(criteria)))
-          nods.push_back(query);
-      break;
-    case 2:
-      nods.push_back(get<2>(criteria));
-      break;
-    case 3:
-      nods = get<3>(criteria);
-      break;
-    }
-    return nods;
+    vector<Element> ns;
+    forEach([&ns](Element &e) mutable { ns.push_back(e); });
+    return ns;
   }
 
   template <typename F, typename Datum = deduce_data<F>>
   Select &forEach(F &&f) {
     auto f_wrapped = make_wrapper(forward<F>(f));
     Datum datum;
-    auto nods = nodes();
-    for (Element &n : nods)
+    auto applicator = [&datum, &f_wrapped](
+                          Element &n, const vector<Element> &nodes) mutable {
       if (n.hasAttribute("data-c3"))
         f_wrapped(*reinterpret_cast<Datum *>(stoull(n.getAttribute("data-c3"))),
-                  n, nods);
+                  n, nodes);
       else
-        f_wrapped(datum, n, nods);
+        f_wrapped(datum, n, nodes);
+    };
+
+    switch (criteria.index()) {
+    case 0:
+      if (group) {
+        for (Element &n : group->nodes()) {
+          auto query = ParentNode(n.node).querySelector(get<0>(criteria));
+          applicator(query, {{query}});
+        }
+      } else {
+        auto query =
+            Document{val::global("document")}.querySelector(get<0>(criteria));
+        applicator(query, {{query}});
+      }
+      break;
+    case 1:
+      if (group)
+        for (Element &n : group->nodes()) {
+          auto qs = ParentNode(n.node).querySelectorAll(get<1>(criteria));
+          vector<Element> queries{begin(qs), end(qs)};
+          for (auto &&query : queries)
+            applicator(query, queries);
+        }
+      else {
+        auto qs = Document{val::global("document")}.querySelectorAll(
+            get<1>(criteria));
+        vector<Element> queries{begin(qs), end(qs)};
+        for (auto &&query : queries)
+          applicator(query, queries);
+      }
+      break;
+    case 2:
+      applicator(get<2>(criteria), {{get<2>(criteria)}});
+      break;
+    case 3:
+      for (auto &&n : get<3>(criteria))
+        applicator(n, get<3>(criteria));
+      break;
+    }
 
     return *this;
   }

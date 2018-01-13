@@ -28,7 +28,7 @@ struct Select {
 
   unique_ptr<Select> group;
 
-  using criteria_type = variant<string, string, Node, vector<Node>>;
+  using criteria_type = variant<string, string, Element, vector<Element>>;
   criteria_type criteria;
 
   Select(const Select &s)
@@ -40,12 +40,12 @@ struct Select {
         criteria.emplace<0>(forward<C>(c));
       else
         criteria.emplace<1>(forward<C>(c));
-    } else if constexpr (is_constructible_v<Node, C>) {
+    } else if constexpr (is_constructible_v<Element, C>) {
       if (!all)
         criteria = forward<C>(c);
       else
         criteria.emplace<3>({forward<C>(c)});
-    } else if constexpr (is_constructible_v<vector<Node>, C>) {
+    } else if constexpr (is_constructible_v<vector<Element>, C>) {
       if (!all)
         criteria = c[0];
       else
@@ -84,13 +84,18 @@ struct Select {
 
   template <typename Database> Database &data() const {
     Database *db = nullptr;
-    auto retriever = [&db](Node &n) {
+    auto retriever = [&db](Element &e) mutable {
       void *address = nullptr;
-      Element e{n.node};
-      if (!e.hasAttribute("data-c3")) {
+      if (!e.hasAttribute("data-c3") ||
+          (e.getAttribute("data-c3-typeinfo-name") !=
+           typeid(remove_const_t<remove_reference_t<Database>>).name())) {
         address = datastore.emplace(shared_ptr<void>{make_shared<Database>()})
                       .first->get();
         e.setAttribute("data-c3", to_string(reinterpret_cast<size_t>(address)));
+        e.setAttribute(
+            "data-c3-typeinfo-name",
+            typeid(remove_const_t<remove_reference_t<Database>>).name());
+
       } else
         address = reinterpret_cast<void *>(stoull(e.getAttribute("data-c3")));
 
@@ -100,60 +105,74 @@ struct Select {
     if (group)
       group->forEach(retriever);
     else {
-      auto doc = Document{val::global("document")}.documentElement();
+      Element doc = Document{val::global("document")}.documentElement();
       retriever(doc);
     }
     return *db;
   }
 
   struct lambda_view {
-    template <typename C> static void caller(void *context, Node &n) {
+    template <typename C> static void caller(void *context, Element &n) {
       (*static_cast<C *>(context))(n);
     }
 
     void *context;
-    void (*call)(void *, Node &);
+    void (*call)(void *, Element &);
 
     template <typename C>
     lambda_view(C &&c) : context(&c), call(&caller<decay_t<C>>) {}
 
-    void operator()(Node &n) { call(context, n); }
+    void operator()(Element &n) { call(context, n); }
   };
 
-  template <typename F> Select &forEach(F &&f) {
+  vector<Element> nodes() {
+    vector<Element> nods;
     switch (criteria.index()) {
     case 0:
       if (group)
-        group->forEach(lambda_view([this, &f](Node &n) mutable {
+        for (Element &n : group->nodes()) {
           auto query = ParentNode(n.node).querySelector(get<0>(criteria));
-          f(query);
-        }));
+          nods.push_back(query);
+        }
       else {
         auto query =
             Document{val::global("document")}.querySelector(get<0>(criteria));
-        f(query);
+        nods.push_back(query);
       }
       break;
     case 1:
       if (group)
-        group->forEach(lambda_view([this, &f](Node &n) mutable {
+        for (Element &n : group->nodes())
           for (auto &&query :
                ParentNode(n.node).querySelectorAll(get<1>(criteria)))
-            f(query);
-        }));
+            nods.push_back(query);
       else
         for (auto &&query : Document{val::global("document")}.querySelectorAll(
                  get<1>(criteria)))
-          f(query);
+          nods.push_back(query);
       break;
     case 2:
-      f(get<2>(criteria));
+      nods.push_back(get<2>(criteria));
       break;
     case 3:
-      for (auto &&node : get<3>(criteria))
-        f(node);
+      nods = get<3>(criteria);
       break;
     }
+    return nods;
+  }
+
+  template <typename F, typename Datum = deduce_data<F>>
+  Select &forEach(F &&f) {
+    auto f_wrapped = make_wrapper(forward<F>(f));
+    Datum datum;
+    auto nods = nodes();
+    for (Element &n : nods)
+      if (n.hasAttribute("data-c3"))
+        f_wrapped(*reinterpret_cast<Datum *>(stoull(n.getAttribute("data-c3"))),
+                  n, nods);
+      else
+        f_wrapped(datum, datum, nods);
+
     return *this;
   }
 };

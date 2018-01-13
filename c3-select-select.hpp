@@ -10,6 +10,9 @@
 
 using std::experimental::is_detected_v;
 
+template <typename F, typename... Args>
+using callable = decltype(declval<F &&>()(declval<Args &&>()...));
+
 struct data_compare {
   using is_transparent = void *;
   bool operator()(const shared_ptr<void> &sp, const void *p) const {
@@ -22,6 +25,129 @@ struct data_compare {
     return l < r;
   }
 };
+
+template <typename F> struct Wrappable { using data_type = nullptr_t; };
+template <typename R> struct Wrappable<R()> {
+  using data_type = nullptr_t;
+  using result_type = R;
+};
+template <typename R, typename Data>
+struct Wrappable<R(Data)> : Wrappable<R()> {
+  using data_type = Data;
+};
+template <typename R> struct Wrappable<R(Element)> : Wrappable<R()> {};
+template <typename R, typename Data>
+struct Wrappable<R(Data, Element)> : Wrappable<R(Data)> {};
+template <typename R, typename Data>
+struct Wrappable<R(Element, Data)> : Wrappable<R(Data)> {};
+template <typename R, typename Data>
+struct Wrappable<R(Data, Element, vector<Element>)> : Wrappable<R(Data)> {};
+template <typename R, typename Data>
+struct Wrappable<R(Data, vector<Element>, Element)> : Wrappable<R(Data)> {};
+template <typename R, typename Data>
+struct Wrappable<R(Element, Data, vector<Element>)> : Wrappable<R(Data)> {};
+template <typename R, typename Data>
+struct Wrappable<R(Element, vector<Element>, Data)> : Wrappable<R(Data)> {};
+template <typename R, typename Data>
+struct Wrappable<R(vector<Element>, Data, Element)> : Wrappable<R(Data)> {};
+template <typename R, typename Data>
+struct Wrappable<R(vector<Element>, Element, Data)> : Wrappable<R(Data)> {};
+template <typename R, typename... Args>
+struct Wrappable<R (*)(Args...)> : Wrappable<R(decay_t<Args>...)> {};
+template <typename R, typename F, typename... Args>
+struct Wrappable<R (F::*)(Args...)> : Wrappable<R(decay_t<Args>...)> {};
+
+template <typename T, typename D = decay_t<T>>
+using deduce_data = typename Wrappable<
+    conditional_t<is_class_v<D>, decltype(&D::operator()), D>>::data_type;
+template <typename T, typename D = decay_t<T>>
+using deduce_result = typename Wrappable<
+    conditional_t<is_class_v<D>, decltype(&D::operator()), D>>::result_type;
+
+template <typename F, typename Data = deduce_data<F>> auto make_wrapper(F &&f) {
+  if constexpr (is_detected_v<callable, F, Data &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(d);
+    };
+  else if constexpr (is_detected_v<callable, F, Element &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(n);
+    };
+  else if constexpr (is_detected_v<callable, F, Data &, Element &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(d, n);
+    };
+  else if constexpr (is_detected_v<callable, F, Element &, Data &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(n, d);
+    };
+  else if constexpr (is_detected_v<callable, F, Data &, Element &,
+                                   const vector<Element> &>)
+    return forward<F>(f);
+  else if constexpr (is_detected_v<callable, F, Data &, const vector<Element> &,
+                                   Element &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(d, v, n);
+    };
+  else if constexpr (is_detected_v<callable, F, Element &, Data &,
+                                   const vector<Element> &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(n, d, v);
+    };
+  else if constexpr (is_detected_v<callable, F, Element &,
+                                   const vector<Element> &, Data &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(n, v, d);
+    };
+  else if constexpr (is_detected_v<callable, F, const vector<Element> &, Data &,
+                                   Element &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(v, d, n);
+    };
+  else if constexpr (is_detected_v<callable, F, const vector<Element> &,
+                                   Element &, Data &>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f(v, n, d);
+    };
+  else if constexpr (is_detected_v<callable, F>)
+    return [f = forward<F>(f)](
+               Data & d, Element & n,
+               const vector<Element> &v) mutable->decltype(auto) {
+      return f();
+    };
+}
+
+template <typename Data, typename F>
+using wrappable = enable_if_t<
+    is_detected_v<callable, F, Data &> ||
+    is_detected_v<callable, F, Element &> ||
+    is_detected_v<callable, F, Data &, Element &> ||
+    is_detected_v<callable, F, Element &, Data &> ||
+    is_detected_v<callable, F, Data &, Element &, const vector<Element> &> ||
+    is_detected_v<callable, F, Data &, const vector<Element> &, Element &> ||
+    is_detected_v<callable, F, Element &, Data &, const vector<Element> &> ||
+    is_detected_v<callable, F, Element &, const vector<Element> &, Data &> ||
+    is_detected_v<callable, F, const vector<Element> &, Data &, Element &> ||
+    is_detected_v<callable, F, const vector<Element> &, Element &, Data &> ||
+    is_detected_v<callable, F>>;
 
 struct Select {
   static set<shared_ptr<void>, data_compare> datastore;
@@ -64,21 +190,50 @@ struct Select {
     return {*this, forward<C>(c), true};
   }
 
-  template <typename Database, typename KeyFunction>
-  auto data(Database &&d, KeyFunction &&k) const {
-    using database_type = view_type<decltype(d)>;
-    using keyfunction_type = view_type<decltype(k)>;
-
-    return Data<database_type, keyfunction_type>{*this, forward<Database>(d),
-                                                 forward<KeyFunction>(k)};
+  template <typename Datafunc, typename KeyFunction,
+            typename Database = deduce_result<Datafunc>,
+            typename Datum = deduce_data<Datafunc>,
+            typename = enable_if_t<is_detected_v<wrappable, Datum, Datafunc>>>
+  auto data(Datafunc &&df, KeyFunction &&kf) {
+    Database database;
+    forEach([ df = make_wrapper(forward<Datafunc>(df)),
+              &database ](Datum & d, Element & n,
+                          const vector<Element> &v) mutable { df(d, n, v); });
+    return Data<Database, KeyFunction>{*this, move(database),
+                                       forward<KeyFunction>(kf)};
   }
 
-  template <typename Database> auto data(Database &&d) const {
-    return data(forward<Database>(d), [](auto &value) {
-      if constexpr (is_detected_v<key_type, Database>)
-        return value.first;
-      else
-        return value;
+  template <typename T> using first_element = tuple_element_t<0, T>;
+
+  template <typename Datafunc, typename Database = deduce_result<Datafunc>,
+            typename Datum = deduce_data<Datafunc>,
+            typename = enable_if_t<is_detected_v<wrappable, Datum, Datafunc>>>
+  auto data(Datafunc &&df) {
+    return data(
+        forward<Datafunc>(df),
+        [](decltype(*begin(declval<Database>())) &value) -> decltype(auto) {
+          if constexpr (is_detected_v<first_element, decay_t<decltype(value)>>)
+            return get<0>(value);
+          else
+            return value;
+        });
+  }
+
+  template <
+      typename Database, typename KeyFunction,
+      typename = enable_if_t<!is_detected_v<wrappable, nullptr_t, Database>>>
+  auto data(Database &&d, KeyFunction &&k) {
+    return data([d = forward<Database>(d)]() mutable->decltype(
+                    auto) { return d; },
+                forward<KeyFunction>(k));
+  }
+
+  template <
+      typename Database,
+      typename = enable_if_t<!is_detected_v<wrappable, nullptr_t, Database>>>
+  auto data(Database &&d) {
+    return data([d = forward<Database>(d)]() mutable->decltype(auto) {
+      return d;
     });
   }
 

@@ -326,7 +326,7 @@ struct Select {
         f_wrapped(*reinterpret_cast<Datum *>(stoull(n.getAttribute("data-c3"))),
                   n, nods);
       else
-        f_wrapped(datum, datum, nods);
+        f_wrapped(datum, n, nods);
 
     return *this;
   }

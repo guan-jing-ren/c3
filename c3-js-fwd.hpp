@@ -25,4 +25,6 @@ struct NodeList;
 struct DOMTokenList;
 struct HTMLCollection;
 
+void console_log(val v) { val::global("console").call<void>("log", v); }
+
 #endif

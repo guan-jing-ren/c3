@@ -4,157 +4,20 @@
 #include "c3-select-fwd.hpp"
 
 #include <experimental/type_traits>
+#include <functional>
 #include <memory>
 #include <set>
 #include <variant>
 
-using std::experimental::is_detected_v;
-
-template <typename F, typename... Args>
-using callable = decltype(declval<F &&>()(declval<Args &&>()...));
-
-struct data_compare {
-  using is_transparent = void *;
-  bool operator()(const shared_ptr<void> &sp, const void *p) const {
-    return sp.get() < p;
-  }
-  bool operator()(const void *p, const shared_ptr<void> &sp) const {
-    return p < sp.get();
-  }
-  bool operator()(const shared_ptr<void> &l, const shared_ptr<void> &r) const {
-    return l < r;
-  }
-};
-
-template <typename F> struct Wrappable { using data_type = nullptr_t; };
-template <typename R> struct Wrappable<R()> {
-  using data_type = nullptr_t;
-  using result_type = R;
-};
-template <typename R, typename Data>
-struct Wrappable<R(Data)> : Wrappable<R()> {
-  using data_type = Data;
-};
-template <typename R> struct Wrappable<R(Element)> : Wrappable<R()> {};
-template <typename R, typename Data>
-struct Wrappable<R(Data, Element)> : Wrappable<R(Data)> {};
-template <typename R, typename Data>
-struct Wrappable<R(Element, Data)> : Wrappable<R(Data)> {};
-template <typename R, typename Data>
-struct Wrappable<R(Data, Element, vector<Element>)> : Wrappable<R(Data)> {};
-template <typename R, typename Data>
-struct Wrappable<R(Data, vector<Element>, Element)> : Wrappable<R(Data)> {};
-template <typename R, typename Data>
-struct Wrappable<R(Element, Data, vector<Element>)> : Wrappable<R(Data)> {};
-template <typename R, typename Data>
-struct Wrappable<R(Element, vector<Element>, Data)> : Wrappable<R(Data)> {};
-template <typename R, typename Data>
-struct Wrappable<R(vector<Element>, Data, Element)> : Wrappable<R(Data)> {};
-template <typename R, typename Data>
-struct Wrappable<R(vector<Element>, Element, Data)> : Wrappable<R(Data)> {};
-template <typename R, typename... Args>
-struct Wrappable<R (*)(Args...)> : Wrappable<R(decay_t<Args>...)> {};
-template <typename R, typename F, typename... Args>
-struct Wrappable<R (F::*)(Args...)> : Wrappable<R(decay_t<Args>...)> {};
-
-template <typename T, typename D = decay_t<T>>
-using deduce_data = typename Wrappable<
-    conditional_t<is_class_v<D>, decltype(&D::operator()), D>>::data_type;
-template <typename T, typename D = decay_t<T>>
-using deduce_result = typename Wrappable<
-    conditional_t<is_class_v<D>, decltype(&D::operator()), D>>::result_type;
-
-template <typename F, typename Data = deduce_data<F>> auto make_wrapper(F &&f) {
-  if constexpr (is_detected_v<callable, F, Data &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(d);
-    };
-  else if constexpr (is_detected_v<callable, F, Element &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(n);
-    };
-  else if constexpr (is_detected_v<callable, F, Data &, Element &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(d, n);
-    };
-  else if constexpr (is_detected_v<callable, F, Element &, Data &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(n, d);
-    };
-  else if constexpr (is_detected_v<callable, F, Data &, Element &,
-                                   const vector<Element> &>)
-    return forward<F>(f);
-  else if constexpr (is_detected_v<callable, F, Data &, const vector<Element> &,
-                                   Element &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(d, v, n);
-    };
-  else if constexpr (is_detected_v<callable, F, Element &, Data &,
-                                   const vector<Element> &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(n, d, v);
-    };
-  else if constexpr (is_detected_v<callable, F, Element &,
-                                   const vector<Element> &, Data &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(n, v, d);
-    };
-  else if constexpr (is_detected_v<callable, F, const vector<Element> &, Data &,
-                                   Element &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(v, d, n);
-    };
-  else if constexpr (is_detected_v<callable, F, const vector<Element> &,
-                                   Element &, Data &>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f(v, n, d);
-    };
-  else if constexpr (is_detected_v<callable, F>)
-    return [f = forward<F>(f)](
-               Data & d, Element & n,
-               const vector<Element> &v) mutable->decltype(auto) {
-      return f();
-    };
-}
-
-template <typename Data, typename F>
-using wrappable = enable_if_t<
-    is_detected_v<callable, F, Data &> ||
-    is_detected_v<callable, F, Element &> ||
-    is_detected_v<callable, F, Data &, Element &> ||
-    is_detected_v<callable, F, Element &, Data &> ||
-    is_detected_v<callable, F, Data &, Element &, const vector<Element> &> ||
-    is_detected_v<callable, F, Data &, const vector<Element> &, Element &> ||
-    is_detected_v<callable, F, Element &, Data &, const vector<Element> &> ||
-    is_detected_v<callable, F, Element &, const vector<Element> &, Data &> ||
-    is_detected_v<callable, F, const vector<Element> &, Data &, Element &> ||
-    is_detected_v<callable, F, const vector<Element> &, Element &, Data &> ||
-    is_detected_v<callable, F>>;
+using c3_factory = std::function<val(val, Element &, const vector<Element> &)>;
+inline c3_factory c3_identity = [](val d, auto &, auto &&) { return d; };
 
 struct Select {
-  static set<shared_ptr<void>, data_compare> datastore;
-
   unique_ptr<Select> group;
 
-  using criteria_type = variant<string, string, Element, vector<Element>>;
+  using criteria_type =
+      variant<string, string, Element, vector<Element>,
+              std::function<void(c3_factory &)>, std::vector<Select>>;
   criteria_type criteria;
 
   Select(const Select &s)
@@ -190,113 +53,34 @@ struct Select {
     return {*this, forward<C>(c), true};
   }
 
-  template <typename Datafunc, typename KeyFunction,
-            typename Database = deduce_result<Datafunc>,
-            typename Datum = deduce_data<Datafunc>,
-            typename = enable_if_t<is_detected_v<wrappable, Datum, Datafunc>>>
-  auto data(Datafunc &&df, KeyFunction &&kf) {
-    Database database;
-    forEach([ df = make_wrapper(forward<Datafunc>(df)),
-              &database ](Datum & d, Element & n,
-                          const vector<Element> &v) mutable { df(d, n, v); });
-    return Data<Database, KeyFunction>{*this, move(database),
-                                       forward<KeyFunction>(kf)};
+  template <typename D = Data> D data(c3_factory df, c3_factory kf) {
+    return D{*this, move(df), move(kf)};
   }
 
-  template <typename T> using first_element = tuple_element_t<0, T>;
-
-  template <typename Datafunc, typename Database = deduce_result<Datafunc>,
-            typename Datum = deduce_data<Datafunc>,
-            typename = enable_if_t<is_detected_v<wrappable, Datum, Datafunc>>>
-  auto data(Datafunc &&df) {
-    return data(
-        forward<Datafunc>(df),
-        [](decltype(*begin(declval<Database>())) &value) -> decltype(auto) {
-          if constexpr (is_detected_v<first_element, decay_t<decltype(value)>>)
-            return get<0>(value);
-          else
-            return value;
-        });
+  template <typename D = Data> D data(c3_factory df) {
+    return data<D>(move(df), c3_identity);
   }
 
-  template <
-      typename Database, typename KeyFunction,
-      typename = enable_if_t<!is_detected_v<wrappable, nullptr_t, Database>>>
-  auto data(Database &&d, KeyFunction &&k) {
-    return data([d = forward<Database>(d)]() mutable->decltype(
-                    auto) { return d; },
-                forward<KeyFunction>(k));
+  template <typename D = Data> D data(val d, c3_factory kf) {
+    return D{*this, d, move(kf)};
   }
 
-  template <
-      typename Database,
-      typename = enable_if_t<!is_detected_v<wrappable, nullptr_t, Database>>>
-  auto data(Database &&d) {
-    return data([d = forward<Database>(d)]() mutable->decltype(auto) {
-      return d;
-    });
-  }
+  template <typename D = Data> D data(val d) { return data<D>(d, c3_identity); }
 
-  template <typename Database> Database &data() const {
-    Database *db = nullptr;
-    auto retriever = [&db](Element &e) mutable {
-      void *address = nullptr;
-      if (!e.hasAttribute("data-c3") ||
-          (e.getAttribute("data-c3-typeinfo-name") !=
-           typeid(remove_const_t<remove_reference_t<Database>>).name())) {
-        address = datastore.emplace(shared_ptr<void>{make_shared<Database>()})
-                      .first->get();
-        e.setAttribute("data-c3", to_string(reinterpret_cast<size_t>(address)));
-        e.setAttribute(
-            "data-c3-typeinfo-name",
-            typeid(remove_const_t<remove_reference_t<Database>>).name());
-
-      } else
-        address = reinterpret_cast<void *>(stoull(e.getAttribute("data-c3")));
-
-      db = static_pointer_cast<Database>(*datastore.find(address)).get();
-    };
-
-    if (group)
-      group->forEach(retriever);
-    else {
-      Element doc = Document{val::global("document")}.documentElement();
-      retriever(doc);
-    }
-    return *db;
-  }
-
-  struct lambda_view {
-    template <typename C> static void caller(void *context, Element &n) {
-      (*static_cast<C *>(context))(n);
-    }
-
-    void *context;
-    void (*call)(void *, Element &);
-
-    template <typename C>
-    lambda_view(C &&c) : context(&c), call(&caller<decay_t<C>>) {}
-
-    void operator()(Element &n) { call(context, n); }
-  };
+  // template <typename Database> Database &data() const {}
 
   vector<Element> nodes() {
     vector<Element> ns;
-    forEach([&ns](Element &e) mutable { ns.push_back(e); });
+    each([&ns](val v, auto &e, auto &&) mutable {
+      ns.push_back(e);
+      return v;
+    });
     return ns;
   }
 
-  template <typename F, typename Datum = deduce_data<F>>
-  Select &forEach(F &&f) {
-    auto f_wrapped = make_wrapper(forward<F>(f));
-    Datum datum;
-    auto applicator = [&datum, &f_wrapped](
-                          Element &n, const vector<Element> &nodes) mutable {
-      if (n.hasAttribute("data-c3"))
-        f_wrapped(*reinterpret_cast<Datum *>(stoull(n.getAttribute("data-c3"))),
-                  n, nodes);
-      else
-        f_wrapped(datum, n, nodes);
+  Select &each(c3_factory f) {
+    auto applicator = [f](Element &n, const vector<Element> &nodes) mutable {
+      f(n.node["data-c3"], n, nodes);
     };
 
     switch (criteria.index()) {
@@ -335,11 +119,46 @@ struct Select {
       for (auto &&n : get<3>(criteria))
         applicator(n, get<3>(criteria));
       break;
+    case 4:
+      get<4>(criteria)(f);
+      break;
+    case 5:
+      for (auto &sel : get<5>(criteria))
+        sel.each(f);
+      break;
     }
-
     return *this;
   }
+
+  Select append(c3_factory f) {
+    Select append_sel{*this};
+    append_sel.criteria.emplace<3>(vector<Element>{});
+    each([&append_sel, &f](val d, auto &e, auto &&v) mutable {
+      auto tag = f(d, e, v).template as<DOMString>();
+      Element element =
+          e.appendChild(e.ownerDocument().createElement(tag).node);
+      if (!d.isNull())
+        element.node.set("data-c3", d);
+      // e.appendChild(element.node);
+      get<3>(append_sel.criteria).push_back(element);
+      return d;
+    });
+    return append_sel;
+  }
+  Select insert(c3_factory f) { return *this; }
+  Select remove(c3_factory f) { return *this; }
+  Select &classed(c3_factory f) { return *this; }
+  Select &style(c3_factory f) { return *this; }
+  Select &attr(c3_factory key, c3_factory value) { return *this; }
+  Select &property(c3_factory key, c3_factory value) { return *this; }
+  Select &text(c3_factory text) {
+    each([&text](val d, auto &e, auto &&v) {
+      e.textContent(text(d, e, v).template as<string>());
+      return d;
+    });
+    return *this;
+  }
+  Select &html(c3_factory html) { return *this; }
 };
 
-set<shared_ptr<void>, data_compare> Select::datastore;
 #endif

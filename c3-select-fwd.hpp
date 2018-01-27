@@ -11,7 +11,7 @@ template <typename T> using key_type = typename decay_t<T>::key_type;
 
 struct c3;
 struct Select;
-template <typename, typename> struct Data;
+struct Data;
 struct Transition;
 
 #endif

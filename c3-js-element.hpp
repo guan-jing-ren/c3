@@ -35,8 +35,9 @@ struct Element : virtual Node,
   DOMString prefix() const { return node["prefix"].as<DOMString>(); }
   DOMString tagName() const { return node["tagName"].as<DOMString>(); }
 
-  DOMString getAttribute(const DOMString &name) const {
-    return node.call<DOMString>("getAttribute", val(name));
+  template <typename Attr = DOMString>
+  Attr getAttribute(const DOMString &name) const {
+    return node.call<Attr>("getAttribute", val(name));
   }
   DOMString getAttributeNS(const DOMString &nameSpace,
                            const DOMString &name) const {
@@ -69,7 +70,8 @@ struct Element : virtual Node,
                          const DOMString &name) const {
     return node.call<void>("removeAttributeNS", val(nameSpace), val(name));
   }
-  bool setAttribute(const DOMString &name, const DOMString &value) const {
+  template <typename Attr = DOMString>
+  bool setAttribute(const DOMString &name, const Attr &value) const {
     return node.call<bool>("setAttribute", val(name), val(value));
   }
   bool setAttributeNS(const DOMString &nameSpace, const DOMString &name,

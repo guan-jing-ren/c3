@@ -48,25 +48,25 @@ int main() {
     dat.call<void>("push", obj[0]);
     dat.call<void>("push", obj[1]);
     console_log(dat);
-    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &, auto &&) {
+    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &&...) {
       return val::global("JSON").call<val>("stringify", d);
     });
     data_sel.enter()
-        .each([](val d, auto &, auto &&) {
+        .each([](val d, auto &&...) {
           cout << "Enter for each:\n";
           console_log(d);
           return d;
         })
-        .append([](val d, auto &, auto &&) { return val{"p"}; })
-        .text([](val d, auto &, auto &&) {
+        .append([](val d, auto &&...) { return val{"p"}; })
+        .text([](val d, auto &&...) {
           return val::global("JSON").call<val>("stringify", d);
         });
-    data_sel.update().each([](val d, auto &, auto &&) {
+    data_sel.update().each([](val d, auto &&...) {
       cout << "Update for each:\n";
       console_log(d);
       return d;
     });
-    data_sel.exit().each([](val d, auto &, auto &&) {
+    data_sel.exit().each([](val d, auto &&...) {
       cout << "Exit for each:\n";
       console_log(d);
       return d;
@@ -80,25 +80,25 @@ int main() {
     dat.call<void>("push", obj[0]);
     dat.call<void>("push", obj[1]);
     console_log(dat);
-    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &, auto &&) {
+    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &&...) {
       return val::global("JSON").call<val>("stringify", d);
     });
     data_sel.enter()
-        .each([](val d, auto &, auto &&) {
+        .each([](val d, auto &&...) {
           cout << "Enter for each:\n";
           console_log(d);
           return d;
         })
-        .append([](val d, auto &, auto &&) { return val{"p"}; })
-        .text([](val d, auto &, auto &&) {
+        .append([](val d, auto &&...) { return val{"p"}; })
+        .text([](val d, auto &&...) {
           return val::global("JSON").call<val>("stringify", d);
         });
-    data_sel.update().each([](val d, auto &, auto &&) {
+    data_sel.update().each([](val d, auto &&...) {
       cout << "Update for each:\n";
       console_log(d);
       return d;
     });
-    data_sel.exit().each([](val d, auto &, auto &&) {
+    data_sel.exit().each([](val d, auto &&...) {
       cout << "Exit for each:\n";
       console_log(d);
       return d;
@@ -107,25 +107,25 @@ int main() {
   {
     val dat = val::array();
     console_log(dat);
-    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &, auto &&) {
+    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &&...) {
       return val::global("JSON").call<val>("stringify", d);
     });
     data_sel.enter()
-        .each([](val d, auto &, auto &&) {
+        .each([](val d, auto &&...) {
           cout << "Enter for each:\n";
           console_log(d);
           return d;
         })
-        .append([](val d, auto &, auto &&) { return val{"p"}; })
-        .text([](val d, auto &, auto &&) {
+        .append([](val d, auto &&...) { return val{"p"}; })
+        .text([](val d, auto &&...) {
           return val::global("JSON").call<val>("stringify", d);
         });
-    data_sel.update().each([](val d, auto &, auto &&) {
+    data_sel.update().each([](val d, auto &&...) {
       cout << "Update for each:\n";
       console_log(d);
       return d;
     });
-    data_sel.exit().each([](val d, auto &, auto &&) {
+    data_sel.exit().each([](val d, auto &&...) {
       cout << "Exit for each:\n";
       console_log(d);
       return d;
@@ -134,19 +134,19 @@ int main() {
   }
   {
     auto table_sel = c3().select("body").append(
-        [](auto, auto &, auto &&) { return val{"table"}; });
+        [](auto, auto &&...) { return val{"table"}; });
     int array[3][4][5][6] = {}, count = 0;
     val array_val = val::array();
-    for (auto &i : array) {
+    for (auto &&i : array) {
       val array_val_i = val::array();
       array_val.call<void>("push", array_val_i);
-      for (auto &j : i) {
+      for (auto &&j : i) {
         val array_val_j = val::array();
         array_val_i.call<void>("push", array_val_j);
-        for (auto &k : j) {
+        for (auto &&k : j) {
           val array_val_k = val::array();
           array_val_j.call<void>("push", array_val_k);
-          for (auto &l : k) {
+          for (auto &&l : k) {
             l = ++count;
             array_val_k.call<void>("push", l);
           }
@@ -203,7 +203,7 @@ int main() {
   // {
   //   HTMLCollection col;
   //   Node named = col.namedItem("name");
-  //   for (auto node : col)
+  //   for (auto &&node : col)
   //     ;
   //   vector<Node> vcol = col;
   // }

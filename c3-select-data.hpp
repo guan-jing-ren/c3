@@ -29,29 +29,29 @@ struct Data {
       data = vecFromJSArray<val>(new_data);
       selection.group->nodes()[0].node.set("data-c3", new_data);
       cout << "data: \n";
-      for (auto &v : data)
+      for (auto &&v : data)
         console_log(v);
     } break;
     case 1:
-      selection.group->each(
-          [ datafunc = get<1>(datafunc), &data ](val d, auto &e, auto &&v) {
-            val new_val = datafunc(d, e, v);
-            e.node.set("data-c3", new_val);
-            auto new_data = vecFromJSArray<val>(new_val);
-            data.insert(end(data), begin(new_data), end(new_data));
-            return d;
-          });
+      selection.group->each([ datafunc = get<1>(datafunc),
+                              &data ](val d, auto &e, auto &&v) mutable {
+        val new_val = datafunc(d, e, v);
+        e.node.set("data-c3", new_val);
+        auto new_data = vecFromJSArray<val>(new_val);
+        data.insert(end(data), begin(new_data), end(new_data));
+        return d;
+      });
       break;
     }
 
-    selection.each([&predata](val d, auto &, auto &&) {
+    selection.each([&predata](val d, auto &&...) mutable {
       if (!d.isNull() && !d.isUndefined())
         predata.push_back(d);
       return d;
     });
 
     cout << "predata: \n";
-    for (auto &v : predata)
+    for (auto &&v : predata)
       console_log(v);
 
     sort(begin(data), end(data), bicomp);
@@ -59,17 +59,17 @@ struct Data {
     set_difference(begin(data), end(data), begin(predata), end(predata),
                    back_inserter(en), bicomp);
     cout << "entry: \n";
-    for (auto &v : en)
+    for (auto &&v : en)
       console_log(v);
     set_difference(begin(predata), end(predata), begin(data), end(data),
                    back_inserter(ex), bicomp);
     cout << "exit: \n";
-    for (auto &v : ex)
+    for (auto &&v : ex)
       console_log(v);
     set_intersection(begin(data), end(data), begin(predata), end(predata),
                      back_inserter(up), bicomp);
     cout << "update: \n";
-    for (auto &v : up)
+    for (auto &&v : up)
       console_log(v);
   }
 
@@ -82,7 +82,7 @@ struct Data {
             if (d.isNull() || d.isUndefined())
               return d;
             auto new_data = vecFromJSArray<val>(d);
-            for (auto n : new_data) {
+            for (auto &&n : new_data) {
               auto new_found = lower_bound(begin(en), end(en), n, bicomp);
               if (new_found != end(en))
                 f(n, e, v);
@@ -96,7 +96,7 @@ struct Data {
   Select update() {
     Select updated{selection};
     updated.criteria.emplace<5>(vector<Select>{});
-    selection.each([this, &updated](val d, auto &e, auto &&v) {
+    selection.each([this, &updated](val d, auto &e, auto &&v) mutable {
       if (d.isNull() || d.isUndefined())
         return d;
       auto new_val_i = lower_bound(begin(up), end(up), d, bicomp);
@@ -116,7 +116,7 @@ struct Data {
   Select exit() {
     Select exited{selection};
     exited.criteria.emplace<5>(vector<Select>{});
-    selection.each([this, &exited](val d, auto &e, auto &&v) {
+    selection.each([this, &exited](val d, auto &e, auto &&v) mutable {
       if (d.isNull() || d.isUndefined())
         return d;
       auto new_val_i = lower_bound(begin(ex), end(ex), d, bicomp);

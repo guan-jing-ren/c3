@@ -10,14 +10,14 @@
 #include <variant>
 
 using c3_factory = std::function<val(val, Element &, const vector<Element> &)>;
-inline c3_factory c3_identity = [](val d, auto &, auto &&) { return d; };
+inline c3_factory c3_identity = [](val d, auto &&...) { return d; };
 
 struct Select {
   unique_ptr<Select> group;
 
   using criteria_type =
       variant<string, string, Element, vector<Element>,
-              std::function<void(c3_factory &)>, std::vector<Select>>;
+              std::function<void(c3_factory &)>, vector<Select>>;
   criteria_type criteria;
 
   Select(const Select &s)
@@ -82,14 +82,14 @@ struct Select {
   }
 
   Select &each(c3_factory f) {
-    auto applicator = [f](Element &n, const vector<Element> &nodes) mutable {
+    auto applicator = [&f](Element &n, const vector<Element> &nodes) mutable {
       f(n.node["data-c3"], n, nodes);
     };
 
     switch (criteria.index()) {
     case 0:
       if (group) {
-        for (Element &n : group->nodes()) {
+        for (auto &&n : group->nodes()) {
           auto query = ParentNode(n.node).querySelector(get<0>(criteria));
           applicator(query, {{query}});
         }
@@ -101,7 +101,7 @@ struct Select {
       break;
     case 1:
       if (group)
-        for (Element &n : group->nodes()) {
+        for (auto &&n : group->nodes()) {
           auto qs = ParentNode(n.node).querySelectorAll(get<1>(criteria));
           vector<Element> queries{begin(qs), end(qs)};
           for (auto &&query : queries)
@@ -158,7 +158,7 @@ struct Select {
   }
 
   Select &classed(const DOMString &classes, c3_factory f) {
-    // each([&classes, &f](val d, auto &&e, auto &&v) {
+    // each([&classes, &f](val d, auto &&e, auto &&v) mutable {
     //   f(d, e, v);
     //   return d;
     // });
@@ -166,28 +166,28 @@ struct Select {
   }
   Select &style(c3_factory f) { return *this; }
   Select &attr(const DOMString &key, c3_factory value) {
-    each([&key, &value](val d, auto &e, auto &&v) {
+    each([&key, &value](val d, auto &e, auto &&v) mutable {
       e.setAttribute(key, value(d, e, v));
       return d;
     });
     return *this;
   }
   Select &property(const DOMString &key, c3_factory value) {
-    each([&key, &value](val d, auto &e, auto &&v) {
+    each([&key, &value](val d, auto &e, auto &&v) mutable {
       e.node.set(key, value(d, e, v));
       return d;
     });
     return *this;
   }
   Select &text(c3_factory text) {
-    each([&text](val d, auto &e, auto &&v) {
+    each([&text](val d, auto &e, auto &&v) mutable {
       e.textContent(text(d, e, v).template as<string>());
       return d;
     });
     return *this;
   }
   Select &html(c3_factory html) {
-    each([&html](val d, auto &e, auto &&v) {
+    each([&html](val d, auto &e, auto &&v) mutable {
       e.innerHTML(html(d, e, v).template as<string>());
       return d;
     });

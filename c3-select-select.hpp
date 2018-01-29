@@ -46,11 +46,14 @@ struct Select {
     group = make_unique<Select>(s);
   }
 
+  template <typename C> Select select(C &&c, bool all) const {
+    return {*this, forward<C>(c), all};
+  }
   template <typename C> Select select(C &&c) const {
-    return {*this, forward<C>(c), false};
+    return select(forward<C>(c), false);
   }
   template <typename C> Select selectAll(C &&c) const {
-    return {*this, forward<C>(c), true};
+    return select(forward<C>(c), true);
   }
 
   template <typename D = Data> D data(c3_factory df, c3_factory kf) {
@@ -146,11 +149,36 @@ struct Select {
     return append_sel;
   }
   Select insert(c3_factory f) { return *this; }
-  Select remove(c3_factory f) { return *this; }
-  Select &classed(c3_factory f) { return *this; }
+  Select &remove() {
+    each([](val d, auto &e, auto &&) {
+      e.parentNode().removeChild(e.node);
+      return d;
+    });
+    return *this;
+  }
+
+  Select &classed(const DOMString &classes, c3_factory f) {
+    // each([&classes, &f](val d, auto &&e, auto &&v) {
+    //   f(d, e, v);
+    //   return d;
+    // });
+    return *this;
+  }
   Select &style(c3_factory f) { return *this; }
-  Select &attr(c3_factory key, c3_factory value) { return *this; }
-  Select &property(c3_factory key, c3_factory value) { return *this; }
+  Select &attr(const DOMString &key, c3_factory value) {
+    each([&key, &value](val d, auto &e, auto &&v) {
+      e.setAttribute(key, value(d, e, v));
+      return d;
+    });
+    return *this;
+  }
+  Select &property(const DOMString &key, c3_factory value) {
+    each([&key, &value](val d, auto &e, auto &&v) {
+      e.node.set(key, value(d, e, v));
+      return d;
+    });
+    return *this;
+  }
   Select &text(c3_factory text) {
     each([&text](val d, auto &e, auto &&v) {
       e.textContent(text(d, e, v).template as<string>());
@@ -158,7 +186,13 @@ struct Select {
     });
     return *this;
   }
-  Select &html(c3_factory html) { return *this; }
+  Select &html(c3_factory html) {
+    each([&html](val d, auto &e, auto &&v) {
+      e.innerHTML(html(d, e, v).template as<string>());
+      return d;
+    });
+    return *this;
+  }
 };
 
 #endif

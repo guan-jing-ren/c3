@@ -130,6 +130,71 @@ int main() {
       console_log(d);
       return d;
     });
+    data_sel.exit().remove();
+  }
+  {
+    auto table_sel = c3().select("body").append(
+        [](auto, auto &, auto &&) { return val{"table"}; });
+    int array[3][4][5][6] = {}, count = 0;
+    val array_val = val::array();
+    for (auto &i : array) {
+      val array_val_i = val::array();
+      array_val.call<void>("push", array_val_i);
+      for (auto &j : i) {
+        val array_val_j = val::array();
+        array_val_i.call<void>("push", array_val_j);
+        for (auto &k : j) {
+          val array_val_k = val::array();
+          array_val_j.call<void>("push", array_val_k);
+          for (auto &l : k) {
+            l = ++count;
+            array_val_k.call<void>("push", l);
+          }
+        }
+      }
+    }
+    console_log(array_val);
+    auto stringify = [](val d, auto &&...) {
+      return val::global("JSON").call<val>("stringify", d);
+    };
+    table_sel.selectAll("tr")
+        .data(array_val, stringify)
+        .enter()
+        .append([](auto &&...) { return val{"tr"}; })
+        .selectAll("td")
+        .data(c3_identity, stringify)
+        .enter()
+        .append([](auto &&...) { return val{"td"}; })
+        .append([](auto &&...) { return val{"table"}; })
+        .selectAll("tr")
+        .data(c3_identity, stringify)
+        .enter()
+        .append([](auto &&...) { return val{"tr"}; })
+        .selectAll("td")
+        .data(c3_identity, stringify)
+        .enter()
+        .append([](auto &&...) { return val{"td"}; })
+        .text(stringify);
+    table_sel.selectAll("tr")
+        .data(array_val, stringify)
+        .enter()
+        .append([](auto &&...) { return val{"tr"}; })
+        .selectAll("td")
+        .data(c3_identity, stringify)
+        .enter()
+        .append([](auto &&...) { return val{"td"}; })
+        .append([](auto &&...) { return val{"table"}; })
+        .selectAll("tr")
+        .data(c3_identity, stringify)
+        .enter()
+        .append([](auto &&...) { return val{"tr"}; })
+        .selectAll("td")
+        .data(c3_identity, stringify)
+        .enter()
+        .append([](auto &&...) { return val{"td"}; })
+        .text(stringify);
+    // .data(c3_identity, stringify)
+    // .enter();
   }
   // {
   //   vector<string> dat{{{"hello"}, {"world"}}};

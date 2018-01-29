@@ -20,23 +20,27 @@ struct Data {
       : selection(s), datafunc(move(df)), keyfunc(move(kf)) {
 
     vector<val> data, predata;
+    if (!selection.group)
+      selection.group = make_unique<Select>(
+          Document{val::global("document")}.documentElement(), false);
     switch (datafunc.index()) {
     case 0: {
-      data = vecFromJSArray<val>(get<0>(datafunc));
+      auto new_data = get<0>(datafunc);
+      data = vecFromJSArray<val>(new_data);
+      selection.group->nodes()[0].node.set("data-c3", new_data);
       cout << "data: \n";
       for (auto &v : data)
         console_log(v);
     } break;
     case 1:
-      if (!selection.group)
-        break;
-      else
-        selection.group->each(
-            [ datafunc = get<1>(datafunc), &data ](val d, auto &e, auto &&v) {
-              auto newdata = vecFromJSArray<val>(datafunc(d, e, v));
-              data.insert(end(data), begin(newdata), end(newdata));
-              return d;
-            });
+      selection.group->each(
+          [ datafunc = get<1>(datafunc), &data ](val d, auto &e, auto &&v) {
+            val new_val = datafunc(d, e, v);
+            e.node.set("data-c3", new_val);
+            auto new_data = vecFromJSArray<val>(new_val);
+            data.insert(end(data), begin(new_data), end(new_data));
+            return d;
+          });
       break;
     }
 
@@ -71,15 +75,20 @@ struct Data {
 
   Select enter() {
     Select entered{selection};
-    vector<Element> nodes;
-    if (entered.group)
-      nodes = entered.group->nodes();
-    nodes.push_back(Document{val::global("document")}.documentElement());
     entered.criteria.emplace<4>(
-        [ en = en, e = nodes[0],
-          v = vector<Element>{} ](c3_factory & f) mutable {
-          for (auto &d : en)
-            f(d, e, v);
+        [ en = en, bicomp = bicomp,
+          group = *selection.group ](c3_factory & f) mutable {
+          group.each([&en, &bicomp, &f](val d, auto &e, auto &&v) mutable {
+            if (d.isNull() || d.isUndefined())
+              return d;
+            auto new_data = vecFromJSArray<val>(d);
+            for (auto n : new_data) {
+              auto new_found = lower_bound(begin(en), end(en), n, bicomp);
+              if (new_found != end(en))
+                f(n, e, v);
+            }
+            return d;
+          });
         });
     return entered;
   }

@@ -166,7 +166,7 @@ int main() {
         .enter()
         .append("td")
         .append("table")
-        .classed("hello class", true)
+        .classed("hello_class", true)
         .selectAll("tr")
         .data(c3_identity, stringify)
         .enter()
@@ -176,7 +176,7 @@ int main() {
         .enter()
         .append("td")
         .text(stringify)
-        .classed("world class", true);
+        .classed("world_class", true);
     table_sel.selectAll("tr")
         .data(array_val, stringify)
         .enter()

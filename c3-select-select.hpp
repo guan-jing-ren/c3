@@ -9,8 +9,39 @@
 #include <set>
 #include <variant>
 
-using c3_factory = std::function<val(val, Element &, const vector<Element> &)>;
-inline c3_factory c3_identity = [](val d, auto &&...) { return d; };
+struct c3_factory {
+  variant<std::function<val(val d, Element &, const vector<Element> &)>,
+          std::function<val(val d, Element &)>, //
+          std::function<val(val d)>,            //
+          std::function<val()>,                 //
+          val>
+      f;
+
+  template <typename F> c3_factory(F ff) : f(move(ff)) {}
+  c3_factory(const char *v) : f(val{v}) {}
+  c3_factory(const c3_factory &) = default;
+  c3_factory(c3_factory &&) = default;
+  c3_factory &operator=(const c3_factory &) = default;
+  c3_factory &operator=(c3_factory &&) = default;
+
+  val operator()(val d, Element &e, const vector<Element> &v) const {
+    switch (f.index()) {
+    case 0:
+      return get<0>(f)(d, e, v);
+    case 1:
+      return get<1>(f)(d, e);
+    case 2:
+      return get<2>(f)(d);
+    case 3:
+      return get<3>(f)();
+    case 4:
+      return get<4>(f);
+    }
+    return val::null();
+  }
+};
+
+inline c3_factory c3_identity = [](val d) { return d; };
 
 struct Select {
   unique_ptr<Select> group;
@@ -74,7 +105,7 @@ struct Select {
 
   vector<Element> nodes() {
     vector<Element> ns;
-    each([&ns](val v, auto &e, auto &&) mutable {
+    each([&ns](val v, auto &e) mutable {
       ns.push_back(e);
       return v;
     });
@@ -150,7 +181,7 @@ struct Select {
   }
   Select insert(c3_factory f) { return *this; }
   Select &remove() {
-    each([](val d, auto &e, auto &&) {
+    each([](val d, auto &e) {
       e.parentNode().removeChild(e.node);
       return d;
     });

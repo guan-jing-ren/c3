@@ -48,25 +48,25 @@ int main() {
     dat.call<void>("push", obj[0]);
     dat.call<void>("push", obj[1]);
     console_log(dat);
-    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &&...) {
+    auto data_sel = c3().selectAll("p").data(dat, [](val d) {
       return val::global("JSON").call<val>("stringify", d);
     });
     data_sel.enter()
-        .each([](val d, auto &&...) {
+        .each([](val d) {
           cout << "Enter for each:\n";
           console_log(d);
           return d;
         })
-        .append([](val d, auto &&...) { return val{"p"}; })
-        .text([](val d, auto &&...) {
+        .append([](val d) { return val{"p"}; })
+        .text([](val d) {
           return val::global("JSON").call<val>("stringify", d);
         });
-    data_sel.update().each([](val d, auto &&...) {
+    data_sel.update().each([](val d) {
       cout << "Update for each:\n";
       console_log(d);
       return d;
     });
-    data_sel.exit().each([](val d, auto &&...) {
+    data_sel.exit().each([](val d) {
       cout << "Exit for each:\n";
       console_log(d);
       return d;
@@ -80,25 +80,25 @@ int main() {
     dat.call<void>("push", obj[0]);
     dat.call<void>("push", obj[1]);
     console_log(dat);
-    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &&...) {
+    auto data_sel = c3().selectAll("p").data(dat, [](val d) {
       return val::global("JSON").call<val>("stringify", d);
     });
     data_sel.enter()
-        .each([](val d, auto &&...) {
+        .each([](val d) {
           cout << "Enter for each:\n";
           console_log(d);
           return d;
         })
-        .append([](val d, auto &&...) { return val{"p"}; })
-        .text([](val d, auto &&...) {
+        .append([](val d) { return val{"p"}; })
+        .text([](val d) {
           return val::global("JSON").call<val>("stringify", d);
         });
-    data_sel.update().each([](val d, auto &&...) {
+    data_sel.update().each([](val d) {
       cout << "Update for each:\n";
       console_log(d);
       return d;
     });
-    data_sel.exit().each([](val d, auto &&...) {
+    data_sel.exit().each([](val d) {
       cout << "Exit for each:\n";
       console_log(d);
       return d;
@@ -107,25 +107,25 @@ int main() {
   {
     val dat = val::array();
     console_log(dat);
-    auto data_sel = c3().selectAll("p").data(dat, [](val d, auto &&...) {
+    auto data_sel = c3().selectAll("p").data(dat, [](val d) {
       return val::global("JSON").call<val>("stringify", d);
     });
     data_sel.enter()
-        .each([](val d, auto &&...) {
+        .each([](val d) {
           cout << "Enter for each:\n";
           console_log(d);
           return d;
         })
-        .append([](val d, auto &&...) { return val{"p"}; })
-        .text([](val d, auto &&...) {
+        .append([](val d) { return val{"p"}; })
+        .text([](val d) {
           return val::global("JSON").call<val>("stringify", d);
         });
-    data_sel.update().each([](val d, auto &&...) {
+    data_sel.update().each([](val d) {
       cout << "Update for each:\n";
       console_log(d);
       return d;
     });
-    data_sel.exit().each([](val d, auto &&...) {
+    data_sel.exit().each([](val d) {
       cout << "Exit for each:\n";
       console_log(d);
       return d;
@@ -133,8 +133,8 @@ int main() {
     data_sel.exit().remove();
   }
   {
-    auto table_sel = c3().select("body").append(
-        [](auto, auto &&...) { return val{"table"}; });
+    auto table_sel =
+        c3().select("body").append([](auto) { return val{"table"}; });
     int array[3][4][5][6] = {}, count = 0;
     val array_val = val::array();
     for (auto &&i : array) {
@@ -154,44 +154,44 @@ int main() {
       }
     }
     console_log(array_val);
-    auto stringify = [](val d, auto &&...) {
+    auto stringify = [](val d) {
       return val::global("JSON").call<val>("stringify", d);
     };
     table_sel.selectAll("tr")
         .data(array_val, stringify)
         .enter()
-        .append([](auto &&...) { return val{"tr"}; })
+        .append("tr")
         .selectAll("td")
         .data(c3_identity, stringify)
         .enter()
-        .append([](auto &&...) { return val{"td"}; })
-        .append([](auto &&...) { return val{"table"}; })
+        .append("td")
+        .append("table")
         .selectAll("tr")
         .data(c3_identity, stringify)
         .enter()
-        .append([](auto &&...) { return val{"tr"}; })
+        .append("tr")
         .selectAll("td")
         .data(c3_identity, stringify)
         .enter()
-        .append([](auto &&...) { return val{"td"}; })
+        .append("td")
         .text(stringify);
     table_sel.selectAll("tr")
         .data(array_val, stringify)
         .enter()
-        .append([](auto &&...) { return val{"tr"}; })
+        .append("tr")
         .selectAll("td")
         .data(c3_identity, stringify)
         .enter()
-        .append([](auto &&...) { return val{"td"}; })
-        .append([](auto &&...) { return val{"table"}; })
+        .append("td")
+        .append("table")
         .selectAll("tr")
         .data(c3_identity, stringify)
         .enter()
-        .append([](auto &&...) { return val{"tr"}; })
+        .append("tr")
         .selectAll("td")
         .data(c3_identity, stringify)
         .enter()
-        .append([](auto &&...) { return val{"td"}; })
+        .append("td")
         .text(stringify);
     // .data(c3_identity, stringify)
     // .enter();

@@ -44,7 +44,7 @@ struct Data {
       break;
     }
 
-    selection.each([&predata](val d, auto &&...) mutable {
+    selection.each([&predata](val d) mutable {
       if (!d.isNull() && !d.isUndefined())
         predata.push_back(d);
       return d;

@@ -36,6 +36,10 @@
         "set": "cpp",
         "__tuple": "cpp",
         "ios": "cpp",
-        "istream": "cpp"
+        "istream": "cpp",
+        "__nullptr": "cpp",
+        "exception": "cpp",
+        "new": "cpp",
+        "stdexcept": "cpp"
     }
 }

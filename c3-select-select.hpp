@@ -19,6 +19,10 @@ struct c3_factory {
 
   template <typename F> c3_factory(F ff) : f(move(ff)) {}
   c3_factory(const char *v) : f(val{v}) {}
+  c3_factory(double v) : f(val{v}) {}
+  c3_factory(bool v) : f(val{v}) {}
+  c3_factory(const DOMString &v) : f(val{v}) {}
+  c3_factory(val v) : f(v) {}
   c3_factory(const c3_factory &) = default;
   c3_factory(c3_factory &&) = default;
   c3_factory &operator=(const c3_factory &) = default;
@@ -125,8 +129,7 @@ struct Select {
           applicator(query, {{query}});
         }
       } else {
-        auto query =
-            Document{val::global("document")}.querySelector(get<0>(criteria));
+        auto query = Document{}.querySelector(get<0>(criteria));
         applicator(query, {{query}});
       }
       break;
@@ -139,8 +142,7 @@ struct Select {
             applicator(query, queries);
         }
       else {
-        auto qs = Document{val::global("document")}.querySelectorAll(
-            get<1>(criteria));
+        auto qs = Document{}.querySelectorAll(get<1>(criteria));
         vector<Element> queries{begin(qs), end(qs)};
         for (auto &&query : queries)
           applicator(query, queries);
@@ -189,10 +191,13 @@ struct Select {
   }
 
   Select &classed(const DOMString &classes, c3_factory f) {
-    // each([&classes, &f](val d, auto &&e, auto &&v) mutable {
-    //   f(d, e, v);
-    //   return d;
-    // });
+    each([&classes, &f](val d, auto &&e, auto &&v) mutable {
+      if (f(d, e, v).template as<bool>())
+        e.classList().add(classes);
+      else
+        e.classList().remove(classes);
+      return d;
+    });
     return *this;
   }
   Select &style(c3_factory f) { return *this; }

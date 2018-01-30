@@ -24,7 +24,7 @@ struct Transition {};
 int main() {
   clog << "c3 loaded.\n";
 
-  Document doc{val::global("document")};
+  Document doc;
   Element para = doc.createElement("p");
   para.textContent("Hello World!");
   doc.body().appendChild(para);
@@ -166,6 +166,7 @@ int main() {
         .enter()
         .append("td")
         .append("table")
+        .classed("hello class", true)
         .selectAll("tr")
         .data(c3_identity, stringify)
         .enter()
@@ -174,7 +175,8 @@ int main() {
         .data(c3_identity, stringify)
         .enter()
         .append("td")
-        .text(stringify);
+        .text(stringify)
+        .classed("world class", true);
     table_sel.selectAll("tr")
         .data(array_val, stringify)
         .enter()

@@ -23,6 +23,9 @@
 struct Document : virtual Node, virtual ParentNode {
   using Node::Node;
 
+  Document(val node) : Node(node) {}
+  Document() : Document(val::global("document")) {}
+
   DOMString characterSet() const {
     return node["characterSet"].as<DOMString>();
   }
@@ -43,7 +46,9 @@ struct Document : virtual Node, virtual ParentNode {
   DOMString styleSheetSets() const {
     return node["styleSheetSets"].as<DOMString>();
   }
-  StyleSheetList<CSSStyleSheet> styleSheets() const { return {node["styleSheets"]}; }
+  StyleSheetList<CSSStyleSheet> styleSheets() const {
+    return {node["styleSheets"]};
+  }
   DOMString visibilityState() const {
     return node["visibilityState"].as<DOMString>();
   }

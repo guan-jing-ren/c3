@@ -21,16 +21,13 @@ struct Data {
 
     vector<val> data, predata;
     if (!selection.group)
-      selection.group = make_unique<Select>(
-          Document{val::global("document")}.documentElement(), false);
+      selection.group =
+          make_unique<Select>(Document{}.documentElement(), false);
     switch (datafunc.index()) {
     case 0: {
       auto new_data = get<0>(datafunc);
       data = vecFromJSArray<val>(new_data);
       selection.group->nodes()[0].node.set("data-c3", new_data);
-      cout << "data: \n";
-      for (auto &&v : data)
-        console_log(v);
     } break;
     case 1:
       selection.group->each([ datafunc = get<1>(datafunc),
@@ -50,27 +47,16 @@ struct Data {
       return d;
     });
 
-    cout << "predata: \n";
-    for (auto &&v : predata)
-      console_log(v);
-
     sort(begin(data), end(data), bicomp);
     sort(begin(predata), end(predata), bicomp);
     set_difference(begin(data), end(data), begin(predata), end(predata),
                    back_inserter(en), bicomp);
-    cout << "entry: \n";
-    for (auto &&v : en)
-      console_log(v);
+
     set_difference(begin(predata), end(predata), begin(data), end(data),
                    back_inserter(ex), bicomp);
-    cout << "exit: \n";
-    for (auto &&v : ex)
-      console_log(v);
+
     set_intersection(begin(data), end(data), begin(predata), end(predata),
                      back_inserter(up), bicomp);
-    cout << "update: \n";
-    for (auto &&v : up)
-      console_log(v);
   }
 
   Select enter() {

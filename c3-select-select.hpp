@@ -58,6 +58,7 @@ struct Select {
   Select(const Select &s)
       : group(s.group ? make_unique<Select>(*s.group) : nullptr),
         criteria(s.criteria) {}
+
   template <typename C> Select(C &&c, bool all) {
     if constexpr (is_constructible_v<DOMString, C>) {
       if (!all)
@@ -76,6 +77,7 @@ struct Select {
         criteria = forward<C>(c);
     }
   }
+
   template <typename C>
   Select(Select s, C &&c, bool all) : Select(forward<C>(c), all) {
     group = make_unique<Select>(s);
@@ -84,9 +86,11 @@ struct Select {
   template <typename C> Select select(C &&c, bool all) const {
     return {*this, forward<C>(c), all};
   }
+
   template <typename C> Select select(C &&c) const {
     return select(forward<C>(c), false);
   }
+
   template <typename C> Select selectAll(C &&c) const {
     return select(forward<C>(c), true);
   }
@@ -104,8 +108,6 @@ struct Select {
   }
 
   template <typename D = Data> D data(val d) { return data<D>(d, c3_identity); }
-
-  // template <typename Database> Database &data() const {}
 
   vector<Element> nodes() {
     vector<Element> ns;
@@ -175,13 +177,14 @@ struct Select {
           e.appendChild(e.ownerDocument().createElement(tag).node);
       if (!d.isNull())
         element.node.set("data-c3", d);
-      // e.appendChild(element.node);
       get<3>(append_sel.criteria).push_back(element);
       return d;
     });
     return append_sel;
   }
+
   Select insert(c3_factory f) { return *this; }
+
   Select &remove() {
     each([](val d, auto &e) {
       e.parentNode().removeChild(e.node);
@@ -200,7 +203,15 @@ struct Select {
     });
     return *this;
   }
-  Select &style(c3_factory f) { return *this; }
+
+  Select &style(const DOMString &property, c3_factory f) {
+    each([&property, &f](val d, auto &e, auto &&v) mutable {
+      e.style().setProperty(property, f(d, e, v).template as<DOMString>());
+      return d;
+    });
+    return *this;
+  }
+
   Select &attr(const DOMString &key, c3_factory value) {
     each([&key, &value](val d, auto &e, auto &&v) mutable {
       e.setAttribute(key, value(d, e, v));
@@ -208,6 +219,7 @@ struct Select {
     });
     return *this;
   }
+
   Select &property(const DOMString &key, c3_factory value) {
     each([&key, &value](val d, auto &e, auto &&v) mutable {
       e.node.set(key, value(d, e, v));
@@ -215,6 +227,7 @@ struct Select {
     });
     return *this;
   }
+
   Select &text(c3_factory text) {
     each([&text](val d, auto &e, auto &&v) mutable {
       e.textContent(text(d, e, v).template as<string>());
@@ -222,6 +235,7 @@ struct Select {
     });
     return *this;
   }
+
   Select &html(c3_factory html) {
     each([&html](val d, auto &e, auto &&v) mutable {
       e.innerHTML(html(d, e, v).template as<string>());

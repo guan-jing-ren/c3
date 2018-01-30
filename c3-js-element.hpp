@@ -2,6 +2,7 @@
 #define C3_JS_ELEMENT_HPP
 
 #include "c3-js-attr.hpp"
+#include "c3-js-cssstyledeclaration.hpp"
 #include "c3-js-domtokenlist.hpp"
 #include "c3-js-htmlcollection.hpp"
 #include "c3-js-namednodemap.hpp"
@@ -79,6 +80,7 @@ struct Element : virtual Node,
     return node.call<bool>("setAttributeNS", val(nameSpace), val(name),
                            val(value));
   }
+  CSSStyleDeclaration style() const { return {node["style"]}; }
 };
 
 #endif

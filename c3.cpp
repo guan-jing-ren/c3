@@ -176,7 +176,10 @@ int main() {
         .enter()
         .append("td")
         .text(stringify)
-        .classed("world_class", true);
+        .classed("world_class", true)
+        .style("color", [](val d) {
+          return d.as<int>() % 2 ? val{"red"} : val{"blue"};
+        });
     table_sel.selectAll("tr")
         .data(array_val, stringify)
         .enter()

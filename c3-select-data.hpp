@@ -6,7 +6,7 @@
 struct Data {
   Select selection;
   variant<val, c3_factory> datafunc;
-  c3_factory keyfunc; // keyfunc(datafunc[i])
+  c3_factory keyfunc;
   vector<val> en, up, ex;
 
   std::function<bool(const val &l, const val &r)> bicomp =
@@ -85,14 +85,17 @@ struct Data {
     selection.each([this, &updated](val d, auto &e, auto &&v) mutable {
       if (d.isNull() || d.isUndefined())
         return d;
+
       auto new_val_i = lower_bound(begin(up), end(up), d, bicomp);
-      if (new_val_i != cend(up)) {
-        Select update_sel{selection};
-        e.node.set("data-c3", *new_val_i);
-        update_sel.criteria.emplace<4>(
-            [e, v](c3_factory f) mutable { f(e.node["data-c3"], e, v); });
-        get<5>(updated.criteria).push_back(update_sel);
-      }
+      if (new_val_i == cend(up))
+        return d;
+
+      Select update_sel{selection};
+      e.node.set("data-c3", *new_val_i);
+      update_sel.criteria.emplace<4>(
+          [e, v](c3_factory f) mutable { f(e.node["data-c3"], e, v); });
+      get<5>(updated.criteria).push_back(update_sel);
+
       return d;
     });
 
@@ -105,13 +108,16 @@ struct Data {
     selection.each([this, &exited](val d, auto &e, auto &&v) mutable {
       if (d.isNull() || d.isUndefined())
         return d;
+
       auto new_val_i = lower_bound(begin(ex), end(ex), d, bicomp);
-      if (new_val_i != cend(ex)) {
-        Select exit_sel{selection};
-        exit_sel.criteria.emplace<4>(
-            [e, v](c3_factory f) mutable { f(e.node["data-c3"], e, v); });
-        get<5>(exited.criteria).push_back(exit_sel);
-      }
+      if (new_val_i == cend(ex))
+        return d;
+
+      Select exit_sel{selection};
+      exit_sel.criteria.emplace<4>(
+          [e, v](c3_factory f) mutable { f(e.node["data-c3"], e, v); });
+      get<5>(exited.criteria).push_back(exit_sel);
+
       return d;
     });
 

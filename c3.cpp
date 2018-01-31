@@ -164,7 +164,7 @@ int main() {
         .selectAll("td")
         .data(c3_identity, stringify)
         .enter()
-        .append("td")
+        .insert("td", ":first-child")
         .append("table")
         .classed("hello_class", true)
         .selectAll("tr")
@@ -174,7 +174,7 @@ int main() {
         .selectAll("td")
         .data(c3_identity, stringify)
         .enter()
-        .append("td")
+        .insert("td", ":first-child")
         .text(stringify)
         .classed("world_class", true)
         .style("color", [](val d) {

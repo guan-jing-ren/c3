@@ -183,7 +183,22 @@ struct Select {
     return append_sel;
   }
 
-  Select insert(c3_factory f) { return *this; }
+  Select insert(c3_factory type, c3_factory before) {
+    Select insert_sel{*this};
+    insert_sel.criteria.emplace<3>(vector<Element>{});
+    each([&insert_sel, &type, &before](val d, auto &e, auto &&v) mutable {
+      Element element = e.insertBefore(
+          e.ownerDocument()
+              .createElement(type(d, e, v).template as<DOMString>())
+              .node,
+          e.querySelector(before(d, e, v).template as<DOMString>()).node);
+      if (!d.isNull())
+        element.node.set("data-c3", d);
+      get<3>(insert_sel.criteria).push_back(element);
+      return d;
+    });
+    return insert_sel;
+  }
 
   Select &remove() {
     each([](val d, auto &e) {
